@@ -1,0 +1,14 @@
+package com.airbnb.housing.repositories.write;
+
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.airbnb.housing.models.User;
+
+@Repository
+public interface userWriteRepo extends JpaRepository<User, Long> {
+	
+	Optional<User> findByEmail(String email);
+}
