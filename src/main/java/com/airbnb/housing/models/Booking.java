@@ -1,5 +1,7 @@
 package com.airbnb.housing.models;
 
+import java.time.LocalDate;
+
 import com.airbnb.housing.utils.BookingStatus;
 
 import jakarta.persistence.Column;
@@ -12,12 +14,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.NoArgsConstructor;
+import lombok.Data;
 
 @Entity
 @Table(name = "booking")
 @Builder
 @AllArgsConstructor
+@Data
 public class Booking {
 
 	@Id
@@ -39,5 +42,11 @@ public class Booking {
 
 	@Column(nullable = false, unique = true)
 	private String idempotencyKey; // Unique key to prevent duplicate bookings
+	
+	@Column(nullable = false)
+	private LocalDate checkInDate; // Store as String for simplicity, can be changed to LocalDate if needed
+	
+	@Column(nullable = false)
+	private LocalDate checkOutDate; // Store as String for simplicity, can be changed to LocalDate if needed
 
 }

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import com.airbnb.housing.models.User;
 
 @Repository
-public interface userWriteRepo extends JpaRepository<User, Long> {
+public interface UserWriteRepository extends JpaRepository<User, Long> {
 	
 	Optional<User> findByEmail(String email);
 }

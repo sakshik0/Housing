@@ -14,7 +14,7 @@ import com.airbnb.housing.models.Booking;
 import jakarta.persistence.LockModeType;
 
 @Repository
-public interface bookingWriteRepo extends JpaRepository<Booking, Long> {
+public interface BookingWriteRepository extends JpaRepository<Booking, Long> {
 	
 	 List<Booking> findbyAirbnbId(Long airbnbId);
 	 
