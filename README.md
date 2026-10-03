@@ -1,6 +1,6 @@
 # Housing
 
-A Spring Boot backend project for a housing/booking system, with a focus on **distributed systems, concurrency, Redis, and Saga-based event processing**.
+A Spring Boot backend project for a housing/booking system, with a focus on **distributed systems, concurrency, Redis, idempotency, and Saga-based event processing**.
 
 ## Tech Stack
 
@@ -30,6 +30,8 @@ MySQL
 
 Service / Business Flow
     ↓
+Redis Read/Write Models
+    ↓
 Saga Event Publisher
     ↓
 Redis
@@ -37,13 +39,68 @@ Redis
 Saga Event Consumer / Processor
 ```
 
-The project also uses Redis for supporting distributed-system concerns such as messaging and concurrency.
+The project uses Redis for read-side data, Saga messaging, idempotency-related lookups, and concurrency/distributed locking.
+
+## Booking Flow
+
+The booking flow validates the requested Airbnb and booking dates, checks availability under a Redis-based lock, calculates the total price, creates the booking with a `PENDING` status, persists it to MySQL, and writes a booking read model to Redis.
+
+```text
+Create Booking Request
+        ↓
+Validate Airbnb + Dates
+        ↓
+Acquire Redis Lock
+        ↓
+Check Availability
+        ↓
+Calculate Price
+        ↓
+Create Booking (PENDING)
+        ↓
+Save to MySQL
+        ↓
+Write Booking Read Model to Redis
+```
+
+## Idempotency
+
+The project includes an idempotency service to support **safe handling of repeated booking requests**.
+
+Idempotency is important in booking systems because the same request can be sent more than once due to client retries, network problems, or request timeouts. The goal is to prevent a retry from unintentionally creating another booking for the same operation.
+
+### Idempotency Key
+
+Each booking stores an `idempotencyKey`. The application has an `IIdempotencyService` abstraction with operations for:
+
+- Checking whether an idempotency key has already been used
+- Retrieving the booking associated with an idempotency key
+
+The read-side lookup is backed by Redis through `RedisReadRepository`.
+
+```text
+Client Request
+     |
+     | idempotency key
+     v
+Idempotency Service
+     |
+     | Check existing booking
+     v
+Redis Booking Read Model
+     |
+     +---- Existing booking ----> Return existing booking
+     |
+     +---- No existing booking -> Continue booking flow
+```
+
+The current implementation contains the service abstraction and booking lookup by idempotency key. The `isIdempotencyKeyUsed` method is currently a placeholder and is intended to be completed as the idempotency workflow is extended.
 
 ## Saga Event Flow
 
-The project contains a Saga event model and publisher for coordinating business operations across steps.
+The project contains a Saga event model, publisher, consumer, and processor for coordinating business operations across steps.
 
-A saga event contains information such as:
+A Saga event contains information such as:
 
 - `sagaId`
 - `eventType`
@@ -52,7 +109,7 @@ A saga event contains information such as:
 - `timestamp`
 - `status`
 
-The event lifecycle starts with a `PENDING` status and can be processed by the saga workflow.
+The event lifecycle starts with a `PENDING` status and can be processed by the Saga workflow.
 
 ### Redis-based Saga Messaging
 
@@ -71,10 +128,13 @@ Redis List: saga:event
       |
       | Consume
       v
-Saga Event Processing
+SagaEventConsumer
+      |
+      v
+SagaEventProcessor
 ```
 
-This provides asynchronous communication between the component producing the saga event and the component processing it.
+The consumer periodically checks the Redis list and processes available Saga events.
 
 ## Redis
 
@@ -83,16 +143,53 @@ Redis is used as part of the application's distributed-system design.
 Current use cases include:
 
 - Saga event messaging
-- Redis-backed operations used by the application
-- Supporting concurrency/distributed locking patterns where required
+- Booking read models
+- Idempotency-related booking lookups
+- Distributed locking for availability checks
+- Redis-backed application operations
 
-Redis is useful here because it provides fast in-memory operations and can support lightweight asynchronous communication and distributed coordination.
+### Redis-based Concurrency Control
+
+The booking flow uses a Redis lock to coordinate concurrent availability checks.
+
+The lock key is based on the Airbnb and requested date range:
+
+```text
+lock:availability:<airbnbId>:<checkInDate>:<checkOutDate>
+```
+
+The lock has a configured expiration time and is released after the availability operation completes.
+
+This is intended to reduce conflicting concurrent booking attempts for the same Airbnb/date range.
+
+## Read and Write Models
+
+The application separates parts of its read and write access.
+
+### Write Side
+
+MySQL/JPA repositories are used for persistent application data, including:
+
+- Airbnb
+- Availability
+- Booking
+- User
+
+### Read Side
+
+Redis read models are used for fast retrieval of:
+
+- Airbnb
+- Availability
+- Booking
+
+Booking read models also contain the stored idempotency key, allowing the application to locate an existing booking using that key.
 
 ## Database
 
 The application uses **MySQL** with **Spring Data JPA** for persistent application data.
 
-The typical data flow is:
+The typical write flow is:
 
 ```text
 REST API
@@ -113,16 +210,20 @@ src/
 └── main/
     ├── java/
     │   └── com/airbnb/housing/
-    │       ├── controller/
+    │       ├── config/
+    │       ├── dtos/
+    │       ├── models/
+    │       │   └── readModels/
+    │       ├── repositories/
+    │       │   ├── read/
+    │       │   └── write/
+    │       ├── saga/
     │       ├── service/
-    │       ├── repository/
-    │       ├── entity/
-    │       └── saga/
+    │       │   └── concurrency/
+    │       └── utils/
     └── resources/
         └── application.properties
 ```
-
-The exact package structure may evolve as new features are added.
 
 ## Getting Started
 
@@ -182,18 +283,21 @@ To run tests:
 
 ## Key Concepts Demonstrated
 
-This project is intended to demonstrate practical backend and distributed-system concepts, including:
+This project demonstrates practical backend and distributed-system concepts, including:
 
 - Spring Boot REST APIs
 - Layered architecture
 - Spring Data JPA
 - MySQL persistence
 - Redis integration
+- Redis read/write models
+- Idempotency
+- Idempotency key-based booking lookup
 - Redis-based messaging
 - Saga pattern
 - Asynchronous event processing
 - JSON serialization
-- Distributed concurrency concepts
+- Distributed concurrency and locking
 - Dependency injection
 - Lombok constructor injection
 
@@ -201,13 +305,14 @@ This project is intended to demonstrate practical backend and distributed-system
 
 Potential extensions to the project include:
 
-- Authentication and authorization
+- Complete the `isIdempotencyKeyUsed` implementation and integrate it into the booking request flow
 - More complete Saga orchestration and compensation handling
 - Kafka-based event streaming for higher-scale event-driven workflows
 - Better observability with metrics and distributed tracing
 - Docker-based local development
 - Integration and end-to-end tests
 - API documentation with OpenAPI/Swagger
+- Stronger atomicity around idempotency-key creation/checking under concurrent requests
 
 ## Author
 
