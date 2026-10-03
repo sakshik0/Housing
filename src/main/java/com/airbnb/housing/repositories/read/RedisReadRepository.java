@@ -19,9 +19,9 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class RedisReadRepository {
 	
-	private static final String AIRBNB_KEY_PREFIX = "airbnb:";
-	private static final String BOOKING_KEY_PREFIX = "booking:";
-	private static final String AVAILABILITY_KEY_PREFIX = "availablity:";
+	public static final String AIRBNB_KEY_PREFIX = "airbnb:";
+	public static final String BOOKING_KEY_PREFIX = "booking:";
+	public static final String AVAILABILITY_KEY_PREFIX = "availablity:";
 	private RedisTemplate<String,String> redisTemplate;
 	private  final ObjectMapper objectMapper;
 	
@@ -84,6 +84,45 @@ public class RedisReadRepository {
 		}
 		
 		return null;
+	}
+	
+	public BookingReadModel getBookingByIdempotencyKey(String idempotencyKey) {
+		Set<String> keys = redisTemplate.keys(BOOKING_KEY_PREFIX + "*"); //get all entries in the booking read model
+//		if (keys != null) {
+//			for (String key : keys) {
+//				String value = redisTemplate.opsForValue().get(key);
+//				if (value != null) {
+//					try {
+//						BookingReadModel booking = objectMapper.readValue(value, BookingReadModel.class);
+//						if (booking.getIdempotencyKey().equals(idempotencyKey)) {
+//							return booking;
+//						}
+//					} catch (Exception e) {
+//						e.printStackTrace();
+//					}
+//				}
+//			}
+//		}
+		
+		if(keys ==null || keys.isEmpty())
+		{
+			return null;
+		}
+		
+		
+		return keys.stream().map(key -> {
+			String value = redisTemplate.opsForValue().get(key);
+			if (value != null) {
+				try {
+					BookingReadModel booking = objectMapper.readValue(value, BookingReadModel.class);
+					if (booking.getIdempotencyKey().equals(idempotencyKey)) {
+						return booking;
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			return null;}).filter(booking -> booking != null).findFirst().orElse(null);
 	}
 	
 }

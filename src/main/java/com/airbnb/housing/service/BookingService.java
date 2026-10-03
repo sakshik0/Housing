@@ -12,11 +12,13 @@ import com.airbnb.housing.dtos.UpdateBookingRequest;
 import com.airbnb.housing.models.Airbnb;
 import com.airbnb.housing.models.Availability;
 import com.airbnb.housing.models.Booking;
+import com.airbnb.housing.repositories.read.RedisWriteRepository;
 import com.airbnb.housing.repositories.write.AirbnbWriteRepository;
 import com.airbnb.housing.repositories.write.BookingWriteRepository;
 import com.airbnb.housing.service.concurrency.ConcurrencyControl;
 import com.airbnb.housing.utils.BookingStatus;
 
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,8 +31,10 @@ public class BookingService implements IBookingService {
 	private final BookingWriteRepository bookingWriteRepository;
 	private final AirbnbWriteRepository availabilityWriteRepository;
 	private final ConcurrencyControl concurrencyControl;
+	private final RedisWriteRepository redisWriteRepository;
 	
 	@Override
+	@Transactional
 	public Booking createBooking(CreateBookingRequest request) {
 		
 		Airbnb airbnb = airbnbWriteRepository.findById(request.getAirbnbId()).orElseThrow(() -> new RuntimeException("Airbnb not found"));
@@ -69,13 +73,14 @@ public class BookingService implements IBookingService {
 		
 		booking = bookingWriteRepository.save(booking);
 		
-		
+		redisWriteRepository.writeBookingReadModelToRedis(booking);
 		return booking;
 	}
 
 	@Override
 	public Booking updateBooking(UpdateBookingRequest request) {
 		// TODO Auto-generated method stub
+		
 		return null;
 	}
 
