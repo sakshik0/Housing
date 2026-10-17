@@ -12,7 +12,7 @@ import lombok.Data;
 @Builder
 @AllArgsConstructor
 public class SagaEvent implements Serializable {
-	private Integer sagaId;
+	private String sagaId;
 	
 	private String eventType;
 	

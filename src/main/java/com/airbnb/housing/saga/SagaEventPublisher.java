@@ -1,6 +1,8 @@
 package com.airbnb.housing.saga;
 
+import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -16,22 +18,22 @@ public class SagaEventPublisher {
 	private final RedisTemplate<String, String> redisTemplate;
 	private final ObjectMapper objectMapper;
 	
-	void publishEvent(SagaEvent event,String Step,Map<String,Object> payload) {
-		SagaEvent sagaEvent = SagaEvent.builder()
-				.sagaId(event.getSagaId())
-				.eventType(event.getEventType())
-				.step(Step)
-				.payload(payload)
-				.timestamp(event.getTimestamp())
-				.status(SagaEvent.SagaStatus.PENDING)
-				.build();
-		try {
-			String eventJson = objectMapper.writeValueAsString(sagaEvent);
-			redisTemplate.opsForList().rightPush(SAGA_QUEUE, eventJson);
-		}
-		catch (Exception e) {
-			throw new RuntimeException("Failed to publish saga event", e);
-		}
-	}
+	 public void publishEvent(String eventType, String step, Map<String, Object> payload) {
+	        SagaEvent sagaEvent = SagaEvent.builder()
+	            .sagaId(UUID.randomUUID().toString())
+	            .eventType(eventType)
+	            .step(step)
+	            .payload(payload)
+	            .timestamp(LocalDateTime.now())
+	            .status(SagaEvent.SagaStatus.PENDING)
+	            .build();
+
+	        try {
+	            String eventJson = objectMapper.writeValueAsString(sagaEvent);
+	            redisTemplate.opsForList().rightPush(SAGA_QUEUE, eventJson);
+	        } catch (Exception e) {
+	            throw new RuntimeException("Failed to publish saga event", e);
+	        }
+	    }
 }
 	

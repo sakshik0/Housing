@@ -44,9 +44,8 @@ public class Booking {
 	private String idempotencyKey; // Unique key to prevent duplicate bookings
 	
 	@Column(nullable = false)
-	private LocalDate checkInDate; // Store as String for simplicity, can be changed to LocalDate if needed
+	private LocalDate checkInDate; 
 	
 	@Column(nullable = false)
-	private LocalDate checkOutDate; // Store as String for simplicity, can be changed to LocalDate if needed
-
+	private LocalDate checkOutDate;
 }

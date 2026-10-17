@@ -1,17 +1,38 @@
 package com.airbnb.housing.saga;
 
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
+import com.airbnb.housing.service.handlers.BookingEventHandler;
+
 import lombok.RequiredArgsConstructor;
-import tools.jackson.databind.ObjectMapper;
 
 @Component
 @RequiredArgsConstructor
 public class SagaEventProcessor {
 	
+	private final BookingEventHandler bookingEventHandler;
 	public void processEvent(SagaEvent event) {
-		// Implement the logic to process the saga event
-		System.out.println("Processing saga event: " + event);
+		switch(event.getEventType()) {
+			case "BOOKING_CREATED":
+				// no action recquired for booking created event
+				break;
+			case "BOOKING_CONFIRM_REQUESTED":
+				bookingEventHandler.handleBookingConfirmRequested(event);
+				break;
+			case "BOOKING_CONFIRMED":
+				// Handle booking cancelled event
+				break;
+			case "BOOKING_CANCEL_REQUESTED":
+				bookingEventHandler.handleBookingCancelRequested(event);
+				break;
+			case "BOOKING_CANCELLED":
+				// Handle booking cancelled event
+				break;
+			case "BOOKING_COMPENSATED":
+				// Handle booking cancelled event
+				break;
+			default:
+				throw new IllegalArgumentException("Unknown event type: " + event.getEventType());
+		}
 	}
 }

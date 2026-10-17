@@ -7,7 +7,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import com.airbnb.housing.models.Availability;
-import com.airbnb.housing.repositories.write.AvailablityWriteRepository;
+import com.airbnb.housing.repositories.write.AvailabilityWriteRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -18,7 +18,7 @@ public class RedisLockStrategy implements ConcurrencyControl {
 	private static final String LOCK_KEY_PREFIX = "lock:availability:";
 	private static final Duration LOCK_EXPIRATION_TIME = Duration.ofMinutes(2); // Set lock expiration time to 2 minutes
 	private final RedisTemplate<String, String> redisTemplate;
-	private final AvailablityWriteRepository availabilityWriteRepository;
+	private final AvailabilityWriteRepository availabilityWriteRepository;
 	
 	@Override
 	public void realeaseLock(Long airbnbId, String checkInDate, String checkOutDate) {
