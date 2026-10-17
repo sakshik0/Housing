@@ -145,6 +145,3 @@ src/main/java/com/airbnb/housing/
 - Add automated tests for publishing, consuming, duplicate events, and failures.
 - Add structured logging and observability.
 
-## License
-
-No license information has been specified yet.
